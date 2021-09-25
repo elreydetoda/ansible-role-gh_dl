@@ -1,0 +1,13 @@
+---
+# defaults file for ansible-role-gh_dl
+
+gh_dl_version: 'latest'
+github_base_url: https://api.github.com
+gh_dl_base_url: '{{ github_base_url }}/repos/{{ repo_user }}/{{ repo_repo }}'
+gh_dl_release_url: '{{ gh_dl_base_url }}/releases'
+dl_checksum: ''
+default_user: "{{ ansible_facts['user_id'] }}"
+default_group: "{{ ansible_facts['user_id'] }}"
+# most things to download and install from GH are binaries
+default_mode: '755'
+file_install_path: '/usr/local/bin'

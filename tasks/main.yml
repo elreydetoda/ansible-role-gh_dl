@@ -1,0 +1,84 @@
+---
+# "{{ ansible_facts['user_shell'] | split('/') | last }}"
+# 
+
+- name: getting all the info from GitHub's API
+  ansible.builtin.uri:
+    url: '{{ gh_dl_release_url }}'
+    return_content: yes
+    body_format: 'json'
+  register: gh_dl_info
+
+- name: debugging dynamic info
+  debug:
+    msg: '{{ gh_dl_info.json }}'
+  when:
+    - debugging is defined
+    - verbose_debug is defined
+
+- name: getting most recent version number
+  set_fact:
+    # for selectattr and map: https://stackoverflow.com/a/21699210
+    # for |- : https://stackoverflow.com/a/21699210
+    # sort_versions is a local filter_plugin
+    gh_dl_version: |-
+      {{
+        gh_dl_info.json | selectattr("prerelease", "equalto", false) |
+          map(attribute='tag_name') | list | sort_versions | last
+      }}
+  when: gh_dl_version == 'latest'
+
+- name: debugging dynamic info
+  debug:
+    var: gh_dl_version
+  when: debugging is defined
+
+# - name: debugging dynamic info
+#   debug:
+#     msg: |
+#       {{
+#         (
+#           gh_dl_info.json | selectattr("tag_name", "equalto", gh_dl_version) | first
+#         ).assets 
+#       }}
+#   when: debugging
+
+- name: setting info for specific version
+  set_fact:
+    # for selectattr and map: https://stackoverflow.com/a/21699210
+    # for |- : https://stackoverflow.com/a/21699210
+    file_to_install: |-
+      {{
+        (
+          (
+            gh_dl_info.json | selectattr("tag_name", "equalto", gh_dl_version) | first
+          ).assets | selectattr("name", "equalto", dl_filename) | first
+        ).browser_download_url
+      }}
+
+
+- name: debugging dynamic info
+  debug:
+    var: '{{ item }}'
+  loop:
+    - file_to_install
+    - dl_checksum
+    - default_user
+    - default_group
+    - default_mode
+    - file_install_path
+    - local_name
+  when: debugging is defined
+  ignore_errors: true
+
+- name: downloading file and making executable
+  ansible.builtin.get_url:
+    # checksum: '{{ dl_checksum }}'
+    url: '{{ file_to_install }}'
+    dest: "{{ file_install_path }}/{{ local_name | default(dl_filename) }}"
+    owner: '{{ default_user }}'
+    group: '{{ default_group }}'
+    mode: '{{ default_mode }}'
+    headers:
+      If-Modified-Since: 'Thu, 05 Jul 1969 15:31:30 GMT'
+  become: true

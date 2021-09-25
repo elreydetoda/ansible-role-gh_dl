@@ -1,0 +1,8 @@
+---
+# vars file for ansible-role-gh_dl
+## define all these to use this role
+# repo_user: ''
+# repo_repo: ''
+# dl_filename: ''
+## optional
+# define local_name to override using dl_filename when writing it locally
